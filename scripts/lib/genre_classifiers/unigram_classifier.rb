@@ -85,7 +85,7 @@ class UnigramGenreClassifier < GenreClassifier
   # stem if necessary
   def clean_string(str)
     str   = str.join(' ') if str.is_a?(Array)
-    words = str.to_s.split
+    words = str.to_s.split#(/[^\w'-]+/)
 
     words.map! do |word|
       word.downcase!
@@ -182,12 +182,48 @@ class UnigramGenreClassifier < GenreClassifier
     return r
   end
 
-  # Turn a key -> Num hash into a Key=>rank hash
+  ## # Turn a key -> Num hash into a Key=>rank hash
+  #def rank(hash)
+  #  order = hash.sort_by{|_, v| v}.map{ |k, _| k }.reverse
+  #  order.each_with_index { |k, i| hash[k] = i }
+  #  return hash 
+  #end
+
+  # Turn a key -> Num hash into a Key=>rank hash,
+  # breaking ties as we go
+  #
+  # This algorithm is big, but it's also clever. ish.
   def rank(hash)
-    order = hash.sort_by{|_, v| v}.map{ |k, _| k }.reverse
-    order.each_with_index { |k, i| hash[k] = i }
+    order = hash.sort_by{|_, v| v}.reverse
+
+    # append this canary so we don't have to check the end
+    # special case
+    order << [nil, -1]
+
+    keys_for_this_rank = []
+    current_rank_value = hash[order[0]]
+    current_rank       = 0
+    order.each do |k, v| 
+
+      keys_for_this_rank << k
+
+      if v != current_rank_value 
+        # puts "-> #{keys_for_this_rank.length} words with #{current_rank_value} occurrences at rank #{current_rank}, #{k} = #{v}"
+
+        # Write keys for this rank
+        keys_for_this_rank.each do |k|
+          hash[k] = current_rank + (keys_for_this_rank.length + 1).to_f / 2.0
+        end
+        
+        current_rank      += keys_for_this_rank.length
+        keys_for_this_rank = []
+        current_rank_value = v
+      end
+
+    end
     return hash 
   end
+
 
 
 end
