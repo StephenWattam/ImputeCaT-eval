@@ -39,6 +39,7 @@
 
       # Compute the score
       fkscore = 206.835 - 1.015 * (word_count.to_f / sentence_count.to_f) - 84.6 * (syllable_count.to_f / word_count.to_f)
+      # fkscore = 0.39 * (word_count.to_f / sentence_count.to_f) + 11.8 * (syllable_count.to_f / word_count.to_f) - 15.59
 
       # require 'pry'; pry binding
 

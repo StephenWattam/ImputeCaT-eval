@@ -21,7 +21,8 @@ AUDIENCE_LEVEL_FLEISCH_SCORES = {
   'high' =>  47 - 12 * 0.5
 }
 
-
+warn "If you want to use the output, redirect STDOUT only to a file:"
+warn " #$0 > ../data/BNC_readabilities.csv\n\n"
 
 
 require_relative './lib/flesch_kincaid'
@@ -33,16 +34,16 @@ class AudienceLevel
   # cat => Fleisch-Kincaid reading score hash
   #
   # ** Ensure that the categories are given in-order!
-  def initialize(categories, default)
+  def initialize(categories, readability_scorer)
     @categories = categories
 
-    @fkscorer = FleschKincaidRanker.new()
+    @scorer = readability_scorer 
   end
 
   # value
   def classify(text)
     text = text
-    score = @fkscorer.reading_ease(text)
+    score = @scorer.reading_ease(text)
 
     return 1 if score.nil?
 
@@ -64,7 +65,6 @@ end
 
 
 
-classifier = AudienceLevel.new(AUDIENCE_LEVEL_FLEISCH_SCORES, AUDIENCE_LEVEL_FLEISCH_SCORES.keys[1])
 
 
 
@@ -72,18 +72,30 @@ classifier = AudienceLevel.new(AUDIENCE_LEVEL_FLEISCH_SCORES, AUDIENCE_LEVEL_FLE
 require 'csv'
 require 'descriptive_statistics'
 
+warn "Loading metadata..."
 audience_level = {}
 CSV.foreach(METADATA, headers: true) do |line|
   audience_level[line.field('File ID')] = line.field('Aud Level')
 end
 
 
+
 require 'nokogiri'
-require_relative './lib/flesch_kincaid'
+require_relative './lib/readability'
 require 'csv'
 
+
+if ARGV.length < 1
+  warn "USAGE: #$0 score_type"
+  warn "Score types: \n  #{Readability::SUPPORTED_TYPES.join("\n  ")}"
+  exit(1)
+end
+
+
+
 count = 0
-fkr = FleschKincaidRanker.new()
+fkr = Readability.new(ARGV[0])
+classifier = AudienceLevel.new(AUDIENCE_LEVEL_FLEISCH_SCORES, fkr)
 ranks_for_audience_level = {}
 errors = {}
 
