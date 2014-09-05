@@ -32,6 +32,18 @@ class UnigramGenreClassifier < GenreClassifier
     end
   end
 
+  def train(cls, str)
+    str = clean_string(str)
+
+    # build frequency list
+    str_freqs = {}
+    str.each {|w| str_freqs[w] ||= 0; str_freqs[w] += 1 }
+    str_freqs = rank(str_freqs)
+
+    require 'pry'; pry binding;
+    @lists[cls] = str_freqs
+  end
+
   # Return a list of possible categories
   def categories
     @lists.keys
@@ -56,8 +68,9 @@ class UnigramGenreClassifier < GenreClassifier
     # Find max
     category = scores.sort_by{|c, s| s }
     # category.each do |c, score|
-    #   puts " > #{c} \t #{score}"
+    #   warn " > #{c} \t #{score}"
     # end
+    warn "==> #{category.last}"
 
     return category.last[0]
   end
@@ -113,11 +126,11 @@ class UnigramGenreClassifier < GenreClassifier
     list_freqs  = []
 
     str.each do |word|
-      if list[word] && list[word] > @threshold # Don't penalise things missing from the lexicon
+      puts "#{word} -> #{list[word]} // #{str_freqs[word]}"
+      if list[word] #&& list[word] > @threshold # Don't penalise things missing from the lexicon
         freqs << (str_freqs[word] || 0)
         list_freqs << (list[word] || 0)
       end
-
     end
 
     return pearson(freqs, list_freqs)
@@ -127,15 +140,16 @@ class UnigramGenreClassifier < GenreClassifier
   def load_keyword_lists(list_hash)
     @lists = {}
 
-    list_hash.each do |category, filename_or_hash|
+    list_hash.each do |category, filename|
 
       cat_list = {}
       puts " Loading keyword list #{category}"
 
-      CSV.foreach(filename_or_hash, headers: true) do |line|
+      CSV.foreach(filename, headers: true) do |line|
 
         word = line[0]
         freq = line[1].to_f
+
 
         next if @stoplist[word]
         cat_list[word] = freq
@@ -143,7 +157,6 @@ class UnigramGenreClassifier < GenreClassifier
 
       # Compute order from frequency
       cat_list = rank(cat_list)
-
       @lists[category] = cat_list
     end
   end
