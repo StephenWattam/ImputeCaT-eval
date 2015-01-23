@@ -1,30 +1,27 @@
+
 require_relative '../genre_classifier.rb'
 
-class UnigramGenreClassifier < GenreClassifier
+class POSTrigramGenreClassifier < GenreClassifier
 
   require 'csv'
   require 'fast-stemmer'
 
   attr_reader :stoplist
-  attr_accessor :threshold
 
-  def initialize(keyword_lists = {}, stoplist = [], threshold = 5)
+  def initialize(stoplist = [])
     @lists = {}
-    @threshold  = threshold
-    @stoplist   = {}
-    stoplist.each { |sw| @stoplist[sw] = true }
 
-    if keyword_lists.is_a?(String)
+    if stoplist.is_a?(String)
       load_memdump(keyword_lists)
     else
-      warn "Not loading keyword lists"
-      # load_keyword_lists(keyword_lists)
+      @stoplist   = {}
+      stoplist.each { |sw| @stoplist[sw] = true }
     end
   end
 
   # Save the state to a file
   def save(filename)
-    hash = { threshold: @threshold,
+    hash = { 
              lists:     @lists,
              stoplist:  @stoplist
     }
@@ -35,6 +32,8 @@ class UnigramGenreClassifier < GenreClassifier
   end
 
   def train(cls, str)
+
+    str = str_to_pos_trigrams(str)
 
 
     str = clean_string(str)
@@ -56,6 +55,8 @@ class UnigramGenreClassifier < GenreClassifier
 
   # Classify a string
   def classify(str)
+
+    str = str_to_pos_trigrams(str)
 
     # require 'pry'; pry binding;
     str = clean_string(str)
@@ -100,6 +101,22 @@ class UnigramGenreClassifier < GenreClassifier
 
   private
 
+  def str_to_pos_trigrams(str)
+
+    require 'engtagger'
+
+    # Compute POS trigrams
+    et = EngTagger.new
+    warn "POS"
+    str = et.add_tags(str).scan(/<(\w+)>/)
+    warn "TRIGRAM"
+    trigrams = []
+    str.each_with_index{|x, i| trigrams << [str[i-1], x, str[i+1]].join('_') }
+    str = trigrams.join(' ')
+
+    return str
+  end
+
   # Clean a string of punctuation and
   # stem if necessary
   def clean_string(str)
@@ -142,31 +159,6 @@ class UnigramGenreClassifier < GenreClassifier
     return pearson(freqs, list_freqs)
   end
 
-  # Load keyword lists from a type=>filename hash
-  def load_keyword_lists(list_hash)
-    @lists = {}
-
-    list_hash.each do |category, filename|
-
-      cat_list = {}
-      puts " Loading keyword list #{category}"
-
-      CSV.foreach(filename, headers: true) do |line|
-
-        word = line[0]
-        freq = line[1].to_f
-
-
-        next if @stoplist[word]
-        cat_list[word] = freq
-      end
-
-      # Compute order from frequency
-      cat_list = rank(cat_list)
-      @lists[category] = cat_list
-    end
-  end
-
   # Load a Marshalled dump
   def load_memdump(filename)
     hash        = Marshal.load(File.read(filename))
@@ -200,13 +192,6 @@ class UnigramGenreClassifier < GenreClassifier
     r = num/den
     return r
   end
-
-  ## # Turn a key -> Num hash into a Key=>rank hash
-  #def rank(hash)
-  #  order = hash.sort_by{|_, v| v}.map{ |k, _| k }.reverse
-  #  order.each_with_index { |k, i| hash[k] = i }
-  #  return hash 
-  #end
 
   # Turn a key -> Num hash into a Key=>rank hash,
   # breaking ties as we go

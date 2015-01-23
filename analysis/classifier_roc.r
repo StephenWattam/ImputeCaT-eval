@@ -23,8 +23,8 @@ ngram.perf = performance(ngram.pred, 'tpr', 'fpr');
 # Render
 
 
-grout('bayes_genre_roc');
+# grout('bayes_genre_roc');
 plot(bayes.perf,
      main="Bayesian (n=2000, train=80%)"
      );
-groff();
+# groff();

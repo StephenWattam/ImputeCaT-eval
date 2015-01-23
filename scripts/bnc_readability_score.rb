@@ -10,7 +10,7 @@ METADATA = '../data/BNC_WORLD_INDEX.csv'
 
 
 
-#Readability ranks: 
+#Readability ranks:
 # -  low: 664  items, mean = 62.95293871760397, sd = 14.424512199650604, var = 208.06655219786907
 # -  med: 1651 items, mean = 55.44412267430666, sd = 12.76812426643693,  var = 163.02499728317557
 # - high: 820  items, mean = 47.70965585209567, sd = 12.445956325065204, var = 154.90182884543054
@@ -29,7 +29,7 @@ require_relative './lib/flesch_kincaid'
 
 class AudienceLevel
 
-  # Initialise the audience level heuristic using a 
+  # Initialise the audience level heuristic using a
   #
   # cat => Fleisch-Kincaid reading score hash
   #
@@ -37,7 +37,7 @@ class AudienceLevel
   def initialize(categories, readability_scorer)
     @categories = categories
 
-    @scorer = readability_scorer 
+    @scorer = readability_scorer
   end
 
   # value
@@ -121,18 +121,18 @@ CSV(STDOUT) do |cout|
 
     str = doc.xpath('//wtext').text # Try written first
     str = doc.xpath('//stext').text if str.length == 0  # then spoken
-    
-    
+
+
     # Compute readability
     readability = fkr.reading_ease(str).to_f
 
     classified_aud_level = classifier.classify(str)
-    
+
     errors[aud_level] ||= 0
     errors[aud_level] += 1 if classified_aud_level != aud_level
 
     warn " #{aud_level} / #{classified_aud_level} = #{readability}"
-    cout << [basename, readability, aud_level, classified_aud_level, 
+    cout << [basename, readability, aud_level, classified_aud_level,
              (classified_aud_level == aud_level ? 1 : 0)]
 
     ranks_for_audience_level[aud_level] ||= []
@@ -150,7 +150,7 @@ warn "Classifier error: "
 errors.each do |rank, error_count|
   count = (ranks_for_audience_level[rank] || []).length
   warn " - #{rank}: #{error_count} / #{count} = (#{(error_count.to_f / count.to_f) * 100.0}%"
- 
+
 end
 
 
